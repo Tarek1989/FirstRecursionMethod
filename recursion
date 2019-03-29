@@ -1,0 +1,76 @@
+ // GetChildren where recursion starts
+ For Each i As TreeListNode In TreeListMain.Nodes
+                GetChildren(i, BooleanList)
+ Next
+            
+ Private Sub GetChildren(parentNode As TreeListNode, BooleanList As List(Of Boolean))
+        //List to save levels of each node
+        Dim lvlnode As List(Of Integer) = New List(Of Integer)
+        //List to save shares of each node
+        Dim sharenode As List(Of Integer) = New List(Of Integer)
+        
+        //storing parent node lvl and share
+        lvlnode.Add(parentNode.Level)
+        sharenode.Add(parentNode(colNoOfShares))
+        
+        //Recursion continues...
+        GetAllChildren(parentNode, lvlnode, sharenode)
+
+        'combining levels and shares 
+        Dim lvlshrmatch As New List(Of Tuple(Of Integer, Integer))
+
+        For i = 0 To lvlnode.Count - 1
+            lvlshrmatch.Add(New Tuple(Of Integer, Integer)(lvlnode(i), sharenode(i)))
+        Next
+        'calculating the total amount of shares for each level
+        CalculateSameLevelShares(lvlshrmatch, BooleanList)
+    End Sub          
+    
+    Private Sub GetAllChildren(parentNode As TreeListNode, lvlnode As List(Of Integer), sharenode As List(Of Integer))
+        
+        // Adding all child levels and shares
+        For Each childNode As TreeListNode In parentNode.Nodes
+            lvlnode.Add(childNode.Level)
+            sharenode.Add(childNode(colNoOfShares))
+            GetAllChildren(childNode, lvlnode, sharenode)
+        Next
+    End Sub
+    
+    Private Sub CalculateSameLevelShares(lvlshrmatch As List(Of Tuple(Of Integer, Integer)), BooleanList As List(Of Boolean))
+
+        'find levels to start adding shares
+        Dim lvlList As New List(Of Integer)
+
+        lvlList = lvlshrmatch.GroupBy(Function(x) x.Item1).Where(Function(g) g.Count >= 1).Select(Function(a) a.Key).ToList()
+
+        Dim previouslvlshares As Integer = 0
+        Dim specificLevelshr As Integer = 0
+        
+        // matching lvl that have been isolated with each level/share in tuple in order to initiate calculation
+        For Each lvl As Integer In lvlList.ToList
+            For Each lvlshr In lvlshrmatch.ToList
+                If lvl = lvlshr.Item1 Then
+                    previouslvlshares += lvlshr.Item2
+                Else
+                    'checking if branching levevl is greater than existing one
+                    If Not (lvlshr.Item1 - lvl) = 1 Then Continue For
+
+                    'branching
+                    specificLevelshr += lvlshr.Item2
+                    If specificLevelshr > previouslvlshares Then
+
+                        MBox.QShow("Share calculation is incorrect. Please revise", "Incorrect share calculation", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                        TreeListMain.SetColumnError(colNoOfShares, "Please revise amount ", DXErrorProvider.ErrorType.Critical)
+                        BooleanList.Add(False)
+                        Exit Sub
+                    End If
+                End If
+
+            Next
+            lvlList.RemoveAt(0)
+            lvlshrmatch.RemoveAt(0)
+            previouslvlshares = 0
+            specificLevelshr = 0
+
+        Next
+    End Sub
